@@ -1,7 +1,24 @@
+import importlib.util
 import json
+import sys
+from pathlib import Path
 
 from powerguess.model import LinearPredictor
-from train import _rmse, fit, load_rows
+
+# ``train.py`` is a development harness, and the wheel does not ship it:
+# packages.find includes only ``powerguess*``. So it cannot be imported by
+# name once the checkout is off sys.path, which is what --import-mode=importlib
+# gives us. Load it from its own path and register it, so that its own
+# absolute imports keep resolving. Nothing is added to sys.path, so the
+# INSTALLED powerguess stays the one under test.
+_TRAIN = Path(__file__).resolve().parent.parent / "train.py"
+if "train" not in sys.modules:
+    _spec = importlib.util.spec_from_file_location("train", _TRAIN)
+    _module = importlib.util.module_from_spec(_spec)
+    sys.modules["train"] = _module
+    _spec.loader.exec_module(_module)
+
+from train import _rmse, fit, load_rows  # noqa: E402
 
 
 def _synthetic(n=200):
